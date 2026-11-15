@@ -18,7 +18,11 @@ capitulation-style washout, then rides the recovery.
   240 batches), so a quiet window still takes at least one trade (the race
   bar asks for at least one trade). The main trigger stays live afterwards.
 - After an exit, wait **15 batches** before buying again.
-- Every order caps slippage at **100 bps** past the deciding close.
+- Every order caps slippage at **100 bps** past the deciding close. A
+  rejected order never deadlocks the bot: a buy rejected at the next open
+  (e.g. the price gapped past the cap) is retried on a later bar while the
+  trigger still holds, and a rejected sell is retried while its exit
+  condition holds (exit bookkeeping moves only when a sell actually fills).
 
 ## Why this shape
 

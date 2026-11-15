@@ -20,7 +20,11 @@
 //     trigger stays live afterwards.
 //   - After an exit, wait COOLDOWN batches before buying again.
 //   - Every order caps slippage at MAX_SLIPPAGE_BPS past the close it was
-//     decided on.
+//     decided on. A rejected order never deadlocks the bot: a buy rejected
+//     at the next open (e.g. the price gapped past the slippage cap) clears
+//     the pending flag, so the entry is retried on a later bar while the
+//     trigger still holds; a rejected sell likewise leaves the exit state
+//     untouched, so the exit is retried while its condition holds.
 //
 // Why this shape: on this competition's dev window (BTC -4.0% end to
 // end, Nov 14-15) the old drop-rebound scalper (12-bar lookback,
@@ -77,6 +81,8 @@ let exitedAt = -1000000;
 let anyFill = false;
 /** Whether a buy order is still waiting for its fill at the next open. */
 let buyPending = false;
+/** Whether a sell order is still waiting for its fill at the next open. */
+let sellPending = false;
 /** Exit parameters of the current position (main vs fallback entry). */
 let exitTP = TAKE_PROFIT_BPS;
 let exitSL = DISASTER_STOP_BPS;
@@ -85,8 +91,17 @@ let exitHold = MAX_HOLD;
 await runBars({
   onBatch(state, batch) {
     for (const fill of batch.fills) {
-      if (fill.status === 'filled' && fill.side === 'buy') anyFill = true;
-      if (fill.status === 'filled' && fill.side === 'sell') buyPending = false;
+      if (fill.side === 'buy' && fill.status === 'filled') anyFill = true;
+      // A rejected order is finished, not pending: clear its flag so the
+      // bot can retry on a later bar instead of waiting forever.
+      if (fill.side === 'buy' && fill.status === 'rejected') buyPending = false;
+      if (fill.side === 'sell' && fill.status === 'filled') {
+        buyPending = false;
+        sellPending = false;
+        exitedAt = batches + 1;
+        enteredAt = -1;
+      }
+      if (fill.side === 'sell' && fill.status === 'rejected') sellPending = false;
     }
     for (const bar of batch.bars) {
       if (bar.symbol !== SYMBOL) continue;
@@ -99,14 +114,17 @@ await runBars({
     const held = state.positions.get(SYMBOL);
     if (held !== undefined) {
       buyPending = false;
+      if (sellPending) return [];
       const value = state.value(SYMBOL, held.qty);
       const cost = held.cost;
       const takeProfit = value * 10000n >= cost * BigInt(10000 + exitTP);
       const stopLoss = value * 10000n <= cost * BigInt(10000 - exitSL);
       const timeStop = enteredAt >= 0 && batches - enteredAt >= exitHold;
       if (takeProfit || stopLoss || timeStop) {
-        exitedAt = batches;
-        enteredAt = -1;
+        // Only the decision is made here; exitedAt/enteredAt move when the
+        // sell actually fills (see the fills loop), so a rejected sell is
+        // retried while its condition still holds.
+        sellPending = true;
         const sell: SellInput = { side: 'sell', symbol: SYMBOL, qty: held.qty, max_slippage_bps: MAX_SLIPPAGE_BPS };
         return [sell];
       }
