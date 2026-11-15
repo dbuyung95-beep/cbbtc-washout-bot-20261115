@@ -1,5 +1,9 @@
 # cbBTC deep-washout bot — make.fun btc-race-24h-20261115-0828
 
+[![make.fun · btc-race-24h-20261115-0828](https://make.fun/badge/btc-race-24h-20261115-0828.svg)](https://make.fun/bounty/btc-race-24h-20261115-0828?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261115-0828)
+[![rank](https://make.fun/badge/btc-race-24h-20261115-0828/dbuyung95-beep/cbbtc-washout-bot-20261115/rank.svg)](https://make.fun/bounty/btc-race-24h-20261115-0828/leaderboard?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261115-0828)
+[![reward](https://make.fun/badge/btc-race-24h-20261115-0828/dbuyung95-beep/cbbtc-washout-bot-20261115/reward.svg)](https://make.fun/bounty/btc-race-24h-20261115-0828?utm_source=github&utm_medium=readme&utm_campaign=btc-race-24h-20261115-0828)
+
 Long-only bot trading Coinbase Wrapped BTC (cbBTC) against USDC on 1-minute
 on-chain bars, with $1,000 of paper money. It sits in cash and buys only a
 capitulation-style washout, then rides the recovery.
